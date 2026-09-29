@@ -12,11 +12,53 @@ option(LAUNCHER_ILINK "Support for loading ELFs from iLink" OFF)
 option(LAUNCHER_UDPBD "Support for loading ELFs from UDPBD" OFF)
 option(LAUNCHER_UDPFS "Support for loading ELFs from UDPFS" OFF)
 option(LAUNCHER_XFROM "Support for loading ELFs from XFROM" ON)
+option(LAUNCHER_CJK_TEST "Display a CJK renderer test on startup" OFF)
+if(LAUNCHER_CJK_TEST)
+  add_compile_definitions(LAUNCHER_CJK_TEST=1)
+endif()
+
+# Generate only the CJK glyphs referenced by UTF-8 source strings.
+find_package(Python3 COMPONENTS Interpreter QUIET)
+if(NOT Python3_Interpreter_FOUND)
+  find_program(PYTHON3_EXECUTABLE NAMES python3 python)
+  if(NOT PYTHON3_EXECUTABLE)
+    message(FATAL_ERROR "Python 3 is required to generate the CJK font")
+  endif()
+else()
+  set(PYTHON3_EXECUTABLE "${Python3_EXECUTABLE}")
+endif()
+set(CJK_GENERATED_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated")
+set(CJK_FONT_CACHE_DIR "$ENV{UNIFONT_CACHE_DIR}")
+if(NOT CJK_FONT_CACHE_DIR)
+  set(CJK_FONT_CACHE_DIR "${CMAKE_BINARY_DIR}/.cache/unifont")
+endif()
+set(CJK_FONT_HEADER "${CJK_GENERATED_DIR}/cjk_font.h")
+file(GLOB_RECURSE CJK_SCAN_FILES CONFIGURE_DEPENDS
+  "${CMAKE_SOURCE_DIR}/*.c"
+  "${CMAKE_SOURCE_DIR}/*.h"
+  "${CMAKE_SOURCE_DIR}/*.CNF"
+  "${CMAKE_SOURCE_DIR}/*.cnf"
+  "${CMAKE_SOURCE_DIR}/*.CFG"
+  "${CMAKE_SOURCE_DIR}/*.cfg"
+)
+add_custom_command(
+  OUTPUT "${CJK_FONT_HEADER}"
+  COMMAND "${PYTHON3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/tools/gen_cjk_font.py"
+    --output "${CJK_FONT_HEADER}"
+    --cache-dir "${CJK_FONT_CACHE_DIR}"
+    --scan-root "${CMAKE_SOURCE_DIR}"
+  DEPENDS "${CMAKE_SOURCE_DIR}/tools/gen_cjk_font.py" ${CJK_SCAN_FILES}
+  COMMENT "Generating CJK bitmap font"
+  VERBATIM
+)
+add_custom_target(cjk_font DEPENDS "${CJK_FONT_HEADER}")
+
 
 # Base sources
 set(EE_SOURCES
     src/main.c
     src/common.c
+    src/cn_screen.c
     src/init.c
     src/handler_mc.c
     src/handler_quickboot.c
@@ -264,6 +306,7 @@ endforeach()
 
 # Create executable
 add_executable(launcher_unc ${EE_SOURCES} ${IRX_SOURCES} ${ELF_SOURCES} ${RES_SOURCES})
+add_dependencies(launcher_unc cjk_font)
 
 # Add dependencies on IOP modules built via Makefiles
 if(LAUNCHER_UDPBD)
@@ -287,12 +330,15 @@ endif()
 target_include_directories(launcher_unc PRIVATE
     ../common/include
     include
+    "${CJK_GENERATED_DIR}"
 )
 
 target_compile_options(launcher_unc PRIVATE
     -Os
     -G0
     -Wall
+    -finput-charset=UTF-8
+    -fexec-charset=UTF-8
 )
 
 # Use the default linker script

@@ -10,7 +10,7 @@ jobs:
     container: ghcr.io/ps2homebrew/ps2homebrew:main
     steps:
       - name: Install build tools
-        run: apk add cmake zip
+        run: apk add cmake zip python3 ca-certificates
 
       - uses: actions/checkout@v4
         with:
@@ -22,6 +22,9 @@ jobs:
           git fetch --prune --unshallow
 
       - name: Build launcHER
+        env:
+          UNIFONT_URL: https://unifoundry.com/pub/unifont/unifont-18.0.01/font-builds/unifont-18.0.01.hex.gz
+          UNIFONT_CACHE_DIR: .ci-font-cache
         run: |
           cmake -B build
           cmake --build build --target launcHER

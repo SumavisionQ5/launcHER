@@ -25,6 +25,11 @@ int main(int argc, char *argv[]) {
   settings.dkwdrvPath = NULL;
   settings.dev9ShutdownType = ShutdownType_All;
 
+#ifdef LAUNCHER_CJK_TEST
+  msg("中文测试：你好，世界！繁體中文：龍戰士4\n");
+  msg("UTF-8 CJK renderer OK\n\n");
+#endif
+
   // Try to guess the device type using argv[0]
   if (!strncmp(argv[0], "mc1", 3))
     settings.mcHint = 1;

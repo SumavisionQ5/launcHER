@@ -1,5 +1,6 @@
 #include "common.h"
 #include "cnf.h"
+#include "cn_screen.h"
 #include "dprintf.h"
 #include "game_id.h"
 #include "handlers.h"
@@ -27,9 +28,7 @@ void initScreen() {
   if (isScreenInited)
     return;
 
-  init_scr();
-  scr_setCursor(0);
-  scr_printf(".\n\n\n\n"); // To avoid messages being hidden by overscan
+  cn_screen_init();
   isScreenInited = 1;
 }
 
@@ -40,7 +39,7 @@ void msg(const char *str, ...) {
 
   initScreen();
 
-  scr_vprintf(str, args);
+  cn_screen_vprintf(str, args);
 
   va_end(args);
 }
@@ -52,7 +51,7 @@ void fail(const char *str, ...) {
 
   initScreen();
 
-  scr_vprintf(str, args);
+  cn_screen_vprintf(str, args);
 
   va_end(args);
 
